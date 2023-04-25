@@ -8,15 +8,15 @@ import (
 	"strconv"
 	"time"
 
-	"computer-based-test//database"
-	"computer-based-test/helpers"
-	"computer-based-test/models"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
+	"joelovien/computer-based-test/database"
+	"joelovien/computer-based-test/helpers"
+	"joelovien/computer-based-test/models"
 )
 
 var userCollection *mongo.Collection = database.OpenCollection(database.Client, "user")
@@ -61,19 +61,19 @@ func Signup() gin.HandlerFunc {
 		//Check to see if name exists
 		regexMatch := bson.M{"$regex": primitive.Regex{Pattern: *user.Email, Options: "i"}}
 		count, err := userCollection.CountDocuments(ctx, bson.M{"email": regexMatch})
-		usernameMatch := bson.M{"$regex": primitive.Regex{Pattern: *user.Username, Options: "i"}}
-		ucount, err := userCollection.CountDocuments(ctx, bson.M{"username": usernameMatch})
+		staffNumberMatch := bson.M{"$regex": primitive.Regex{Pattern: *user.StaffNumber, Options: "i"}}
+		ucount, err := userCollection.CountDocuments(ctx, bson.M{"staff_no": staffNumberMatch})
 		defer cancel()
 		if err != nil {
 			log.Panic(err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "error occured while checking for the Name"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "error occured while checking for the Staff Number"})
 		}
 		if count > 0 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "this email already exists", "count": count})
 			return
 		}
 		if ucount > 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "this username already exists", "count": count})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "this user already exists", "count": count})
 			return
 		}
 
@@ -83,7 +83,7 @@ func Signup() gin.HandlerFunc {
 		user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 		user.ID = primitive.NewObjectID()
 		user.User_id = user.ID.Hex()
-		token, refreshToken, _ := helper.GenerateAllTokens(*user.Email, *user.Name, *user.Username, *user.User_type, *&user.User_id)
+		token, refreshToken, _ := helper.GenerateAllTokens(*user.Email, *user.Name, *user.StaffNumber, *user.User_type, *&user.User_id)
 		user.Token = &token
 		user.Refresh_token = &refreshToken
 
@@ -108,7 +108,7 @@ func Signup() gin.HandlerFunc {
 		newUser := models.User{
 			ID:            user.ID,
 			Name:          user.Name,
-			Username:      user.Username,
+			StaffNumber:   user.StaffNumber,
 			Email:         user.Email,
 			User_id:       user.ID.Hex(),
 			Password:      user.Password,
@@ -156,10 +156,10 @@ func Login() gin.HandlerFunc {
 			return
 		}
 
-		err := userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
+		err := userCollection.FindOne(ctx, bson.M{"staff_no": user.StaffNumber}).Decode(&foundUser)
 		defer cancel()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "email or password is incorrect"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "staff number or password is incorrect"})
 			return
 		}
 
@@ -170,10 +170,10 @@ func Login() gin.HandlerFunc {
 			return
 		}
 
-		if foundUser.Email == nil {
+		if foundUser.StaffNumber == nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 		}
-		token, refreshToken, _ := helper.GenerateAllTokens(*foundUser.Email, *foundUser.Name, *foundUser.Username, *foundUser.User_type, foundUser.User_id)
+		token, refreshToken, _ := helper.GenerateAllTokens(*foundUser.Email, *foundUser.Name, *foundUser.StaffNumber, *foundUser.User_type, foundUser.User_id)
 		helper.UpdateAllTokens(token, refreshToken, foundUser.User_id)
 		err = userCollection.FindOne(ctx, bson.M{"user_id": foundUser.User_id}).Decode(&foundUser)
 

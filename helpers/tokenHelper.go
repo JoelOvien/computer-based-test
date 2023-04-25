@@ -7,20 +7,20 @@ import (
 	"os"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/genesdemon/golang-jwt-project/database"
+	"github.com/dgrijalva/jwt-go"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"joelovien/computer-based-test/database"
 )
 
 type SignedDetails struct {
-	Email     string
-	Name      string
-	Username  string
-	Uid       string
-	User_type string
+	Email       string
+	Name        string
+	StaffNumber string
+	Uid         string
+	User_type   string
 	jwt.StandardClaims
 }
 
@@ -28,13 +28,13 @@ var userCollection *mongo.Collection = database.OpenCollection(database.Client, 
 
 var SECRET_KEY string = os.Getenv("SECRET_KEY")
 
-func GenerateAllTokens(email string, name string, userName string, userType string, uid string) (signedToken string, signedRefreshToken string, err error) {
+func GenerateAllTokens(email string, name string, staffNumber string, userType string, uid string) (signedToken string, signedRefreshToken string, err error) {
 	claims := &SignedDetails{
-		Email:     email,
-		Name:      name,
-		Username:  userName,
-		Uid:       uid,
-		User_type: userType,
+		Email:       email,
+		Name:        name,
+		StaffNumber: staffNumber,
+		Uid:         uid,
+		User_type:   userType,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(24)).Unix(),
 		},
